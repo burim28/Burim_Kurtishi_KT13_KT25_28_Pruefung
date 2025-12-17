@@ -1,0 +1,102 @@
+@page "/stundenplan/create"
+@using StundenPlanApp.Data
+@using StundenPlanApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject StundenplanDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Neuer Stundenplaneintrag</PageTitle>
+
+<h1>Neuer Stundenplaneintrag</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <EditForm Model="@eintrag" OnValidSubmit="@HandleValidSubmit" FormName="CreateForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="klasseId" class="form-label">Klasse:</label>
+                <InputSelect id="klasseId" @bind-Value="eintrag.KlasseId" class="form-control">
+                    <option value="0">-- Bitte wählen --</option>
+                    @foreach (var klasse in klassen)
+                    {
+                        <option value="@klasse.Id">@klasse.Name</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label for="datum" class="form-label">Datum:</label>
+                <InputDate id="datum" @bind-Value="eintrag.Datum" class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label for="uhrzeit" class="form-label">Uhrzeit:</label>
+                <input type="time" id="uhrzeit" value="@uhrzeitString" @onchange="@((ChangeEventArgs e) => uhrzeitString = e.Value?.ToString() ?? "08:00")" class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label for="lehrerId" class="form-label">Lehrer:</label>
+                <InputSelect id="lehrerId" @bind-Value="eintrag.LehrerId" class="form-control">
+                    <option value="0">-- Bitte wählen --</option>
+                    @foreach (var l in lehrerListe)
+                    {
+                        <option value="@l.Id">@l.Name</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label for="schulzimmerId" class="form-label">Schulzimmer:</label>
+                <InputSelect id="schulzimmerId" @bind-Value="eintrag.SchulzimmerId" class="form-control">
+                    <option value="0">-- Bitte wählen --</option>
+                    @foreach (var zimmer in schulzimmerListe)
+                    {
+                        <option value="@zimmer.Id">@zimmer.Nummer (Kapazität: @zimmer.Kapazitaet)</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label for="aufgabenstellung" class="form-label">Aufgabenstellung:</label>
+                <InputTextArea id="aufgabenstellung" @bind-Value="eintrag.Aufgabenstellung" class="form-control" rows="4" />
+            </div>
+
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <a href="/stundenplan" class="btn btn-secondary">Abbrechen</a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private Models.StundenplanEintrag eintrag = new() { Datum = DateTime.Today, Uhrzeit = new TimeSpan(8, 0, 0) };
+    private List<Models.Klasse> klassen = new();
+    private List<Models.Lehrer> lehrerListe = new();
+    private List<Models.Schulzimmer> schulzimmerListe = new();
+    private string uhrzeitString = "08:00";
+
+    protected override async Task OnInitializedAsync()
+    {
+        klassen = await DbContext.Klassen.OrderBy(k => k.Name).ToListAsync();
+        lehrerListe = await DbContext.Lehrer.OrderBy(l => l.Name).ToListAsync();
+        schulzimmerListe = await DbContext.Schulzimmer.OrderBy(s => s.Nummer).ToListAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        // Uhrzeit parsen
+        if (TimeSpan.TryParse(uhrzeitString, out var uhrzeit))
+        {
+            eintrag.Uhrzeit = uhrzeit;
+        }
+
+        DbContext.StundenplanEintraege.Add(eintrag);
+        await DbContext.SaveChangesAsync();
+        Navigation.NavigateTo("/stundenplan");
+    }
+}
+

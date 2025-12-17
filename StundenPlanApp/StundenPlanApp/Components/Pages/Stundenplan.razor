@@ -1,0 +1,97 @@
+@page "/stundenplan"
+@using StundenPlanApp.Data
+@using StundenPlanApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject StundenplanDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Stundenplan</PageTitle>
+
+<h1>Stundenplan Verwaltung</h1>
+
+<p>
+    <a href="/stundenplan/create" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Neuer Eintrag
+    </a>
+</p>
+
+@if (stundenplanEintraege == null)
+{
+    <p><em>Laden...</em></p>
+}
+else if (!stundenplanEintraege.Any())
+{
+    <div class="alert alert-info">
+        Keine Stundenplaneinträge vorhanden. Erstellen Sie einen neuen Eintrag.
+    </div>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Klasse</th>
+                <th>Datum</th>
+                <th>Uhrzeit</th>
+                <th>Lehrer</th>
+                <th>Schulzimmer</th>
+                <th>Aufgabenstellung</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var eintrag in stundenplanEintraege)
+            {
+                <tr>
+                    <td>@eintrag.Klasse?.Name</td>
+                    <td>@eintrag.Datum.ToString("dd.MM.yyyy")</td>
+                    <td>@eintrag.Uhrzeit.ToString(@"hh\:mm")</td>
+                    <td>@eintrag.Lehrer?.Name</td>
+                    <td>@eintrag.Schulzimmer?.Nummer</td>
+                    <td>@eintrag.Aufgabenstellung</td>
+                    <td>
+                        <a href="/stundenplan/edit/@eintrag.Id" class="btn btn-sm btn-warning">
+                            <i class="bi bi-pencil"></i> Bearbeiten
+                        </a>
+                        <button @onclick="() => DeleteEintrag(eintrag.Id)" class="btn btn-sm btn-danger">
+                            <i class="bi bi-trash"></i> Löschen
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<StundenplanEintrag>? stundenplanEintraege;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        stundenplanEintraege = await DbContext.StundenplanEintraege
+            .Include(s => s.Klasse)
+            .Include(s => s.Lehrer)
+            .Include(s => s.Schulzimmer)
+            .OrderBy(s => s.Datum)
+            .ThenBy(s => s.Uhrzeit)
+            .ToListAsync();
+    }
+
+    private async Task DeleteEintrag(int id)
+    {
+        var eintrag = await DbContext.StundenplanEintraege.FindAsync(id);
+        if (eintrag != null)
+        {
+            DbContext.StundenplanEintraege.Remove(eintrag);
+            await DbContext.SaveChangesAsync();
+            await LoadData();
+        }
+    }
+}
+

@@ -1,0 +1,85 @@
+@page "/schulzimmer"
+@using StundenPlanApp.Data
+@using StundenPlanApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject StundenplanDbContext DbContext
+@rendermode InteractiveServer
+
+<PageTitle>Schulzimmer Verwaltung</PageTitle>
+
+<h1>Schulzimmer Verwaltung</h1>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h3>Neues Schulzimmer</h3>
+        <EditForm Model="@neuesZimmer" OnValidSubmit="@AddZimmer" FormName="AddZimmerForm">
+            <div class="mb-2">
+                <InputText @bind-Value="neuesZimmer.Nummer" class="form-control" placeholder="Zimmernummer" />
+            </div>
+            <div class="mb-2">
+                <InputNumber @bind-Value="neuesZimmer.Kapazitaet" class="form-control" placeholder="Kapazität" />
+            </div>
+            <button type="submit" class="btn btn-primary">Hinzufügen</button>
+        </EditForm>
+    </div>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Zimmernummer</th>
+            <th>Kapazität</th>
+            <th>Aktionen</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var zimmer in zimmerListe)
+        {
+            <tr>
+                <td>@zimmer.Nummer</td>
+                <td>@zimmer.Kapazitaet</td>
+                <td>
+                    <button @onclick="() => DeleteZimmer(zimmer.Id)" class="btn btn-sm btn-danger">Löschen</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Models.Schulzimmer> zimmerListe = new();
+    private Models.Schulzimmer neuesZimmer = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        zimmerListe = await DbContext.Schulzimmer.OrderBy(z => z.Nummer).ToListAsync();
+    }
+
+    private async Task AddZimmer()
+    {
+        if (!string.IsNullOrWhiteSpace(neuesZimmer.Nummer))
+        {
+            DbContext.Schulzimmer.Add(neuesZimmer);
+            await DbContext.SaveChangesAsync();
+            neuesZimmer = new();
+            await LoadData();
+        }
+    }
+
+    private async Task DeleteZimmer(int id)
+    {
+        var zimmer = await DbContext.Schulzimmer.FindAsync(id);
+        if (zimmer != null)
+        {
+            DbContext.Schulzimmer.Remove(zimmer);
+            await DbContext.SaveChangesAsync();
+            await LoadData();
+        }
+    }
+}
+

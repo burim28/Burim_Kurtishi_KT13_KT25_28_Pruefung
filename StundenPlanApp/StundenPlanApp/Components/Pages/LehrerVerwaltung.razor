@@ -1,0 +1,85 @@
+@page "/lehrer"
+@using StundenPlanApp.Data
+@using StundenPlanApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject StundenplanDbContext DbContext
+@rendermode InteractiveServer
+
+<PageTitle>Lehrer Verwaltung</PageTitle>
+
+<h1>Lehrer Verwaltung</h1>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h3>Neuer Lehrer</h3>
+        <EditForm Model="@neuerLehrer" OnValidSubmit="@AddLehrer" FormName="AddLehrerForm">
+            <div class="mb-2">
+                <InputText @bind-Value="neuerLehrer.Name" class="form-control" placeholder="Name" />
+            </div>
+            <div class="mb-2">
+                <InputText @bind-Value="neuerLehrer.Email" class="form-control" placeholder="E-Mail" />
+            </div>
+            <button type="submit" class="btn btn-primary">Hinzufügen</button>
+        </EditForm>
+    </div>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>E-Mail</th>
+            <th>Aktionen</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var lehrer in lehrerListe)
+        {
+            <tr>
+                <td>@lehrer.Name</td>
+                <td>@lehrer.Email</td>
+                <td>
+                    <button @onclick="() => DeleteLehrer(lehrer.Id)" class="btn btn-sm btn-danger">Löschen</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Lehrer> lehrerListe = new();
+    private Lehrer neuerLehrer = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        lehrerListe = await DbContext.Lehrer.OrderBy(l => l.Name).ToListAsync();
+    }
+
+    private async Task AddLehrer()
+    {
+        if (!string.IsNullOrWhiteSpace(neuerLehrer.Name))
+        {
+            DbContext.Lehrer.Add(neuerLehrer);
+            await DbContext.SaveChangesAsync();
+            neuerLehrer = new();
+            await LoadData();
+        }
+    }
+
+    private async Task DeleteLehrer(int id)
+    {
+        var lehrer = await DbContext.Lehrer.FindAsync(id);
+        if (lehrer != null)
+        {
+            DbContext.Lehrer.Remove(lehrer);
+            await DbContext.SaveChangesAsync();
+            await LoadData();
+        }
+    }
+}
+
